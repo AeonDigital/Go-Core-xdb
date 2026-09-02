@@ -1,0 +1,67 @@
+Go-Core-xdb
+================================
+
+![Go Test Coverage](https://raw.githubusercontent.com/github.com/AeonDigital/Go-Core-xdb/badges/.badges/main/coverage.svg)
+
+> [Aeon Digital](http://www.aeondigital.com.br)
+> rianna@aeondigital.com.br
+
+&nbsp;
+
+> Type-safe generic repository pattern for database CRUD operations with transaction and idempotency support.
+
+FULL DESCRIPTION @TODO
+
+
+
+
+&nbsp;
+________________________________________________________________________________
+
+## 1. INSTALLATION @TODO
+
+This section describes how to install and setup this module within your local workspace
+or downstream production servers.
+
+
+
+
+&nbsp;
+________________________________________________________________________________
+
+## 2. GLOBAL CONFIGURATION @TODO
+
+This section details the environment variables, configuration sheets, and service
+parameters required to bootstrap the application engine.
+
+
+
+
+&nbsp;
+________________________________________________________________________________
+
+## 3. BASIC USAGE @TODO
+
+Provide actionable code blueprints, CLI target usage examples, or API endpoint execution
+structures here.
+
+
+
+
+&nbsp;
+________________________________________________________________________________
+
+## 4. ADDITIONAL INFORMATION
+
+This project uses the [Semantic Versioning](https://semver.org/) system proposed
+by **Tom Preston-Werner**.
+
+
+
+
+&nbsp;
+________________________________________________________________________________
+
+## 5. LICENSE
+
+This project is offered under the [MIT license](LICENSE.md).
