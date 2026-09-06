@@ -1,5 +1,5 @@
-github.com/AeonDigital/Go-Core-xerrors v0.0.5 h1:d/16k/lEKxY6sQp7jcmSsgRBdp5xgLCbbUJcjm6/Ii0=
-github.com/AeonDigital/Go-Core-xerrors v0.0.5/go.mod h1:WuMei4yMFexZqeABKOuPrDfhUlqa80xp1XAFP/6tObU=
+github.com/AeonDigital/Go-Core-xerrors v0.0.6 h1:OXsesDF/PDQ5DEjxezfDMC/shfmOoPvngZZjy7d0S/0=
+github.com/AeonDigital/Go-Core-xerrors v0.0.6/go.mod h1:WuMei4yMFexZqeABKOuPrDfhUlqa80xp1XAFP/6tObU=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 h1:LMLX+LgTNWpfvCBdFebv6EsYotImrt/Ppc5cXIriCSo=
