@@ -3,7 +3,7 @@ module github.com/AeonDigital/Go-Core-xdb
 go 1.27.0
 
 require (
-	github.com/AeonDigital/Go-Core-xerrors v0.0.6
+	github.com/AeonDigital/Go-Core-xerrors v0.0.7
 	modernc.org/sqlite v1.57.0
 )
 
