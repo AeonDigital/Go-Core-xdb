@@ -72,12 +72,12 @@ func (e *MyEntity) Validate() (bool, xerrors.ErrorCode) { /* validate */ }
 func (e *MyEntity) TableName() string              { return "my_table" }
 func (e *MyEntity) Columns() []string              { return []string{"name"} }
 func (e *MyEntity) Values() []any                  { return []any{e.Name} }
-func (e *MyEntity) TablePK() string                { return "id" }
-func (e *MyEntity) BindPK(id any)                  { e.ID = id.(int64) }
-func (e *MyEntity) PKValue() any                   { return e.ID }
-func (e *MyEntity) ScanRow(rows *sql.Rows) error  { /* hydrate */ }
-func (e *MyEntity) GeneratePK() any                { return nil }
-func (e *MyEntity) IsNaturalPK() bool              { return false }
+func (e *MyEntity) PKColumnName() string           { return "id" }
+func (e *MyEntity) PKSetValue(id any)              { e.ID = id.(int64) }
+func (e *MyEntity) PKGetValue() any                { return e.ID }
+func (e *MyEntity) ScanRow(rows *sql.Rows) error   { /* hydrate */ }
+func (e *MyEntity) PKGenerateValue() any           { return nil }
+func (e *MyEntity) PKExternal() bool               { return false }
 ```
 
 ### Generic Repository

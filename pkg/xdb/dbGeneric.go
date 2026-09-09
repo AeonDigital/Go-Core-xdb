@@ -112,7 +112,7 @@ func (r *DBGeneric[T, PT]) shouldBeIdempotent(ctx context.Context, isUpdate bool
 
 // Insert validates model states, produces identifiers when applicable, and stores records securely.
 func (r *DBGeneric[T, PT]) Insert(ctx context.Context, entity PT) xerrors.ErrorCode {
-	currentPK := entity.PKValue()
+	currentPK := entity.PKGetValue()
 
 	switch v := currentPK.(type) {
 	case int64:
@@ -121,24 +121,24 @@ func (r *DBGeneric[T, PT]) Insert(ctx context.Context, entity PT) xerrors.ErrorC
 			return XERR_REPO_INSERT_WITH_UNEXPECTED_NUMERIC_PK
 		}
 	case string:
-		if !entity.IsNaturalPK() && strings.TrimSpace(v) != "" {
+		if !entity.PKExternal() && strings.TrimSpace(v) != "" {
 			logRepoError(ctx, r.db, XERR_REPO_INSERT_WITH_UNEXPECTED_STRING_PK, nil, "", nil)
 			return XERR_REPO_INSERT_WITH_UNEXPECTED_STRING_PK
 		}
-		if entity.IsNaturalPK() && strings.TrimSpace(v) == "" {
+		if entity.PKExternal() && strings.TrimSpace(v) == "" {
 			logRepoError(ctx, r.db, XERR_REPO_INSERT_WITH_UNEXPECTED_EMPTY_PK, nil, "", nil)
 			return XERR_REPO_INSERT_WITH_UNEXPECTED_EMPTY_PK
 		}
 	case nil:
-		if entity.IsNaturalPK() {
+		if entity.PKExternal() {
 			logRepoError(ctx, r.db, XERR_REPO_INSERT_WITH_UNEXPECTED_NIL_PK, nil, "", nil)
 			return XERR_REPO_INSERT_WITH_UNEXPECTED_NIL_PK
 		}
 	}
 
-	generated := entity.GeneratePK()
+	generated := entity.PKGenerateValue()
 	if generated != nil {
-		entity.BindPK(generated)
+		entity.PKSetValue(generated)
 	}
 
 	entity.Normalize()
@@ -169,8 +169,8 @@ func (r *DBGeneric[T, PT]) Insert(ctx context.Context, entity PT) xerrors.ErrorC
 		return XERR_REPO_INSERT_EXECUTION_FAILED
 	}
 
-	if entity.TablePK() == "id" {
-		currentVal := entity.PKValue()
+	if entity.PKColumnName() == "id" {
+		currentVal := entity.PKGetValue()
 
 		isUnset := currentVal == nil
 		if !isUnset {
@@ -183,7 +183,7 @@ func (r *DBGeneric[T, PT]) Insert(ctx context.Context, entity PT) xerrors.ErrorC
 		if isUnset {
 			id, err := result.LastInsertId()
 			if id > 0 && err == nil {
-				entity.BindPK(id)
+				entity.PKSetValue(id)
 			} else {
 				logRepoError(ctx, r.db, XERR_REPO_INSERT_FETCH_ID_FAILED, err, query, values)
 			}
@@ -195,7 +195,7 @@ func (r *DBGeneric[T, PT]) Insert(ctx context.Context, entity PT) xerrors.ErrorC
 
 // Update coordinates column updates while enforcing primary key validations and idempotency rules.
 func (r *DBGeneric[T, PT]) Update(ctx context.Context, entity PT) xerrors.ErrorCode {
-	currentPK := entity.PKValue()
+	currentPK := entity.PKGetValue()
 
 	switch v := currentPK.(type) {
 	case int64:
@@ -240,10 +240,10 @@ func (r *DBGeneric[T, PT]) Update(ctx context.Context, entity PT) xerrors.ErrorC
 		"UPDATE %s SET %s WHERE %s = ?;",
 		entity.TableName(),
 		strings.Join(setFragments, ", "),
-		entity.TablePK(),
+		entity.PKColumnName(),
 	)
 
-	args := append(values, entity.PKValue())
+	args := append(values, entity.PKGetValue())
 
 	result, err := r.executor.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -274,10 +274,10 @@ func (r *DBGeneric[T, PT]) Delete(ctx context.Context, entity PT) xerrors.ErrorC
 	query := fmt.Sprintf(
 		"DELETE FROM %s WHERE %s = ?;",
 		entity.TableName(),
-		entity.TablePK(),
+		entity.PKColumnName(),
 	)
 
-	pkValue := entity.PKValue()
+	pkValue := entity.PKGetValue()
 	args := []any{pkValue}
 
 	result, err := r.executor.ExecContext(ctx, query, pkValue)
@@ -311,7 +311,7 @@ func (r *DBGeneric[T, PT]) GetByID(ctx context.Context, id any) (*T, xerrors.Err
 	query := fmt.Sprintf(
 		"SELECT * FROM %s WHERE %s = ? LIMIT 1;",
 		instance.TableName(),
-		instance.TablePK(),
+		instance.PKColumnName(),
 	)
 
 	args := []any{id}

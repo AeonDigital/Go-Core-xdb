@@ -58,21 +58,21 @@ func (m *MockUser) Values() []any {
 		return []any{}
 	}
 	if m.UUID != "" || m.IsNatural {
-		return []any{m.PKValue(), m.Name, m.Email}
+		return []any{m.PKGetValue(), m.Name, m.Email}
 	}
 	return []any{m.Name, m.Email}
 }
 
-// TablePK identifies the target primary key column name.
-func (m *MockUser) TablePK() string {
+// PKColumnName identifies the target primary key column name.
+func (m *MockUser) PKColumnName() string {
 	if m.UUID != "" || m.Name == "App Generated User" {
 		return "uuid"
 	}
 	return "id"
 }
 
-// BindPK injects runtime generated keys back into the entity structure.
-func (m *MockUser) BindPK(id any) {
+// PKSetValue injects runtime generated keys back into the entity structure.
+func (m *MockUser) PKSetValue(id any) {
 	switch v := id.(type) {
 	case int64:
 		m.ID = v
@@ -81,8 +81,8 @@ func (m *MockUser) BindPK(id any) {
 	}
 }
 
-// PKValue yields the current primary key snapshot value.
-func (m *MockUser) PKValue() any {
+// PKGetValue yields the current primary key snapshot value.
+func (m *MockUser) PKGetValue() any {
 	if m.Name == "FORCE_UNKNOWN_PK_TYPE" {
 		return float64(1.23)
 	}
@@ -123,15 +123,15 @@ func (m *MockUser) ScanRow(rows *sql.Rows) error {
 	return nil
 }
 
-// GeneratePK simulates application-side key generation (e.g., UUIDv7).
-func (m *MockUser) GeneratePK() any {
+// PKGenerateValue simulates application-side key generation (e.g., UUIDv7).
+func (m *MockUser) PKGenerateValue() any {
 	if m.UUID == "" && m.Name == "App Generated User" {
 		return "GENERATED-UUID-123"
 	}
 	return nil
 }
 
-// IsNaturalPK informs the repository if the key configuration relies on external values.
-func (m *MockUser) IsNaturalPK() bool {
+// PKExternal informs the repository if the key configuration relies on external values.
+func (m *MockUser) PKExternal() bool {
 	return m.IsNatural
 }
