@@ -1021,22 +1021,30 @@ func TestDBGeneric_Count(t *testing.T) {
 	ctx := context.Background()
 	repo := xdb.NewDBGeneric[MockUser](db)
 	user := &MockUser{Name: "Count User", Email: "count@example.com"}
+	secondUser := &MockUser{Name: "Second Count User", Email: "second-count@example.com"}
 	if errCode := repo.Insert(ctx, user); errCode != xdb.XERR_NONE {
 		t.Fatalf("failed to insert count fixture: %s", errCode)
 	}
+	if errCode := repo.Insert(ctx, secondUser); errCode != xdb.XERR_NONE {
+		t.Fatalf("failed to insert second count fixture: %s", errCode)
+	}
 
-	t.Run("Success counting matching primary key", func(t *testing.T) {
-		count, errCode := repo.Count(ctx, user.ID)
+	t.Run("Success counting all records", func(t *testing.T) {
+		count, errCode := repo.Count(ctx)
 		if errCode != xdb.XERR_NONE {
 			t.Fatalf("expected %s, got %s", xdb.XERR_NONE, errCode)
 		}
-		if count != 1 {
-			t.Errorf("expected count 1, got %d", count)
+		if count != 2 {
+			t.Errorf("expected count 2, got %d", count)
 		}
 	})
 
-	t.Run("Success returning zero for missing primary key", func(t *testing.T) {
-		count, errCode := repo.Count(ctx, 9999)
+	t.Run("Success returning zero for empty table", func(t *testing.T) {
+		emptyDB := setupTestDB(t)
+		defer emptyDB.Close()
+		emptyRepo := xdb.NewDBGeneric[MockUser](emptyDB)
+
+		count, errCode := emptyRepo.Count(ctx)
 		if errCode != xdb.XERR_NONE {
 			t.Fatalf("expected %s, got %s", xdb.XERR_NONE, errCode)
 		}
@@ -1050,9 +1058,9 @@ func TestDBGeneric_Count(t *testing.T) {
 		deadDb.Close()
 		deadRepo := xdb.NewDBGeneric[MockUser](deadDb)
 
-		_, errCode := deadRepo.Count(ctx, user.ID)
-		if errCode != xdb.XERR_REPO_COUNT_EXEC_FAILED {
-			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_EXEC_FAILED, errCode)
+		_, errCode := deadRepo.Count(ctx)
+		if errCode != xdb.XERR_REPO_COUNT_WHERE_EXEC_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_WHERE_EXEC_FAILED, errCode)
 		}
 	})
 
@@ -1060,9 +1068,9 @@ func TestDBGeneric_Count(t *testing.T) {
 		repoRowsFail := xdb.NewDBGeneric[MockUser](db)
 		repoRowsFail.SetExecutorForTest(mockExecutorGetAllIterError{})
 
-		_, errCode := repoRowsFail.Count(ctx, user.ID)
-		if errCode != xdb.XERR_REPO_COUNT_SCAN_FAILED {
-			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_SCAN_FAILED, errCode)
+		_, errCode := repoRowsFail.Count(ctx)
+		if errCode != xdb.XERR_REPO_COUNT_WHERE_SCAN_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_WHERE_SCAN_FAILED, errCode)
 		}
 	})
 
@@ -1070,9 +1078,9 @@ func TestDBGeneric_Count(t *testing.T) {
 		repoScanFail := xdb.NewDBGeneric[MockUser](db)
 		repoScanFail.SetExecutorForTest(mockExecutorCountScanError{})
 
-		_, errCode := repoScanFail.Count(ctx, user.ID)
-		if errCode != xdb.XERR_REPO_COUNT_SCAN_FAILED {
-			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_SCAN_FAILED, errCode)
+		_, errCode := repoScanFail.Count(ctx)
+		if errCode != xdb.XERR_REPO_COUNT_WHERE_SCAN_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_WHERE_SCAN_FAILED, errCode)
 		}
 	})
 
