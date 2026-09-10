@@ -440,3 +440,69 @@ func (r *DBGeneric[T, PT]) GetWhere(ctx context.Context, queryFragment string, a
 
 	return list, XERR_NONE
 }
+
+// Count returns the number of records matching the provided primary key.
+func (r *DBGeneric[T, PT]) Count(ctx context.Context, id any) (int, xerrors.ErrorCode) {
+	var instance PT = new(T)
+
+	query := fmt.Sprintf(
+		"SELECT COUNT(*) FROM %s WHERE %s = ?;",
+		instance.TableName(),
+		instance.PKColumnName(),
+	)
+
+	args := []any{id}
+	rows, err := r.executor.QueryContext(ctx, query, id)
+	if err != nil {
+		logRepoError(ctx, r.db, XERR_REPO_COUNT_EXEC_FAILED, err, query, args)
+		return 0, XERR_REPO_COUNT_EXEC_FAILED
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		logRepoError(ctx, r.db, XERR_REPO_COUNT_SCAN_FAILED, rows.Err(), query, args)
+		return 0, XERR_REPO_COUNT_SCAN_FAILED
+	}
+
+	var count int
+	if err := rows.Scan(&count); err != nil {
+		logRepoError(ctx, r.db, XERR_REPO_COUNT_SCAN_FAILED, err, query, args)
+		return 0, XERR_REPO_COUNT_SCAN_FAILED
+	}
+
+	return count, XERR_NONE
+}
+
+// CountWhere returns the number of records matching the provided condition.
+func (r *DBGeneric[T, PT]) CountWhere(ctx context.Context, queryFragment string, args ...any) (int, xerrors.ErrorCode) {
+	placeholderCount := strings.Count(queryFragment, "?")
+	argCount := len(args)
+
+	if placeholderCount != argCount {
+		logRepoError(ctx, r.db, XERR_REPO_COUNT_WHERE_ARGS_MISMATCH, nil, queryFragment, args)
+		return 0, XERR_REPO_COUNT_WHERE_ARGS_MISMATCH
+	}
+
+	var meta PT = new(T)
+	query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s;", meta.TableName(), queryFragment)
+
+	rows, err := r.executor.QueryContext(ctx, query, args...)
+	if err != nil {
+		logRepoError(ctx, r.db, XERR_REPO_COUNT_WHERE_EXEC_FAILED, err, query, args)
+		return 0, XERR_REPO_COUNT_WHERE_EXEC_FAILED
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		logRepoError(ctx, r.db, XERR_REPO_COUNT_WHERE_SCAN_FAILED, rows.Err(), query, args)
+		return 0, XERR_REPO_COUNT_WHERE_SCAN_FAILED
+	}
+
+	var count int
+	if err := rows.Scan(&count); err != nil {
+		logRepoError(ctx, r.db, XERR_REPO_COUNT_WHERE_SCAN_FAILED, err, query, args)
+		return 0, XERR_REPO_COUNT_WHERE_SCAN_FAILED
+	}
+
+	return count, XERR_NONE
+}

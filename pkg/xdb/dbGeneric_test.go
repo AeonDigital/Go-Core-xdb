@@ -96,6 +96,60 @@ func (m mockExecutorGetAllIterError) QueryRowContext(ctx context.Context, query 
 	return nil
 }
 
+type mockCountScanConnector struct{}
+
+func (mockCountScanConnector) Connect(context.Context) (driver.Conn, error) {
+	return mockCountScanConn{}, nil
+}
+func (mockCountScanConnector) Driver() driver.Driver { return nil }
+
+type mockCountScanConn struct{}
+
+func (mockCountScanConn) Prepare(query string) (driver.Stmt, error) {
+	return mockCountScanStmt{}, nil
+}
+func (mockCountScanConn) Close() error              { return nil }
+func (mockCountScanConn) Begin() (driver.Tx, error) { return nil, nil }
+
+type mockCountScanStmt struct{}
+
+func (mockCountScanStmt) Close() error                                    { return nil }
+func (mockCountScanStmt) NumInput() int                                   { return -1 }
+func (mockCountScanStmt) Exec(args []driver.Value) (driver.Result, error) { return nil, nil }
+func (mockCountScanStmt) Query(args []driver.Value) (driver.Rows, error) {
+	return &mockCountScanRows{}, nil
+}
+
+type mockCountScanRows struct {
+	read bool
+}
+
+func (m *mockCountScanRows) Columns() []string { return []string{"count"} }
+func (m *mockCountScanRows) Close() error      { return nil }
+func (m *mockCountScanRows) Next(dest []driver.Value) error {
+	if m.read {
+		return io.EOF
+	}
+	m.read = true
+	dest[0] = "not-a-number"
+	return nil
+}
+
+type mockExecutorCountScanError struct{}
+
+func (mockExecutorCountScanError) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return nil, nil
+}
+
+func (mockExecutorCountScanError) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	fakeDb := sql.OpenDB(mockCountScanConnector{})
+	return fakeDb.QueryContext(ctx, query, args...)
+}
+
+func (mockExecutorCountScanError) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	return nil
+}
+
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -956,6 +1010,117 @@ func TestDBGeneric_GetWhere(t *testing.T) {
 		_, errCode := repoRowsFail.GetWhere(ctx, "name = ?", "FAIL_GETWHERE")
 		if errCode != xdb.XERR_REPO_GET_ALL_ITERATION_FAILED {
 			t.Errorf("expected %s, got %s", xdb.XERR_REPO_GET_ALL_ITERATION_FAILED, errCode)
+		}
+	})
+}
+
+func TestDBGeneric_Count(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ctx := context.Background()
+	repo := xdb.NewDBGeneric[MockUser](db)
+	user := &MockUser{Name: "Count User", Email: "count@example.com"}
+	if errCode := repo.Insert(ctx, user); errCode != xdb.XERR_NONE {
+		t.Fatalf("failed to insert count fixture: %s", errCode)
+	}
+
+	t.Run("Success counting matching primary key", func(t *testing.T) {
+		count, errCode := repo.Count(ctx, user.ID)
+		if errCode != xdb.XERR_NONE {
+			t.Fatalf("expected %s, got %s", xdb.XERR_NONE, errCode)
+		}
+		if count != 1 {
+			t.Errorf("expected count 1, got %d", count)
+		}
+	})
+
+	t.Run("Success returning zero for missing primary key", func(t *testing.T) {
+		count, errCode := repo.Count(ctx, 9999)
+		if errCode != xdb.XERR_NONE {
+			t.Fatalf("expected %s, got %s", xdb.XERR_NONE, errCode)
+		}
+		if count != 0 {
+			t.Errorf("expected count 0, got %d", count)
+		}
+	})
+
+	t.Run("Fail when database execution crashes", func(t *testing.T) {
+		deadDb, _ := sql.Open("sqlite", ":memory:")
+		deadDb.Close()
+		deadRepo := xdb.NewDBGeneric[MockUser](deadDb)
+
+		_, errCode := deadRepo.Count(ctx, user.ID)
+		if errCode != xdb.XERR_REPO_COUNT_EXEC_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_EXEC_FAILED, errCode)
+		}
+	})
+
+	t.Run("Fail when cursor iteration crashes", func(t *testing.T) {
+		repoRowsFail := xdb.NewDBGeneric[MockUser](db)
+		repoRowsFail.SetExecutorForTest(mockExecutorGetAllIterError{})
+
+		_, errCode := repoRowsFail.Count(ctx, user.ID)
+		if errCode != xdb.XERR_REPO_COUNT_SCAN_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_SCAN_FAILED, errCode)
+		}
+	})
+
+	t.Run("Fail when count scan crashes", func(t *testing.T) {
+		repoScanFail := xdb.NewDBGeneric[MockUser](db)
+		repoScanFail.SetExecutorForTest(mockExecutorCountScanError{})
+
+		_, errCode := repoScanFail.Count(ctx, user.ID)
+		if errCode != xdb.XERR_REPO_COUNT_SCAN_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_SCAN_FAILED, errCode)
+		}
+	})
+
+	t.Run("Success counting records with condition", func(t *testing.T) {
+		count, errCode := repo.CountWhere(ctx, "email = ?", "count@example.com")
+		if errCode != xdb.XERR_NONE {
+			t.Fatalf("expected %s, got %s", xdb.XERR_NONE, errCode)
+		}
+		if count != 1 {
+			t.Errorf("expected count 1, got %d", count)
+		}
+	})
+
+	t.Run("Fail when placeholders and arguments mismatch", func(t *testing.T) {
+		_, errCode := repo.CountWhere(ctx, "email = ? AND name = ?", "count@example.com")
+		if errCode != xdb.XERR_REPO_COUNT_WHERE_ARGS_MISMATCH {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_WHERE_ARGS_MISMATCH, errCode)
+		}
+	})
+
+	t.Run("Fail conditional count when database execution crashes", func(t *testing.T) {
+		deadDb, _ := sql.Open("sqlite", ":memory:")
+		deadDb.Close()
+		deadRepo := xdb.NewDBGeneric[MockUser](deadDb)
+
+		_, errCode := deadRepo.CountWhere(ctx, "email = ?", "count@example.com")
+		if errCode != xdb.XERR_REPO_COUNT_WHERE_EXEC_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_WHERE_EXEC_FAILED, errCode)
+		}
+	})
+
+	t.Run("Fail conditional count when cursor iteration crashes", func(t *testing.T) {
+		repoRowsFail := xdb.NewDBGeneric[MockUser](db)
+		repoRowsFail.SetExecutorForTest(mockExecutorGetAllIterError{})
+
+		_, errCode := repoRowsFail.CountWhere(ctx, "email = ?", "count@example.com")
+		if errCode != xdb.XERR_REPO_COUNT_WHERE_SCAN_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_WHERE_SCAN_FAILED, errCode)
+		}
+	})
+
+	t.Run("Fail conditional count when scan crashes", func(t *testing.T) {
+		repoScanFail := xdb.NewDBGeneric[MockUser](db)
+		repoScanFail.SetExecutorForTest(mockExecutorCountScanError{})
+
+		_, errCode := repoScanFail.CountWhere(ctx, "email = ?", "count@example.com")
+		if errCode != xdb.XERR_REPO_COUNT_WHERE_SCAN_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_COUNT_WHERE_SCAN_FAILED, errCode)
 		}
 	})
 }

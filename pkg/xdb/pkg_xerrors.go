@@ -57,8 +57,14 @@ const (
 	XERR_REPO_GET_WHERE_EXEC_FAILED      xerrors.ErrorCode = "E5010"
 	XERR_REPO_GET_WHERE_SCAN_FAILED      xerrors.ErrorCode = "E5011"
 
-	XERR_REPO_QUERY_RAW_EXEC_FAILED xerrors.ErrorCode = "E6001"
-	XERR_REPO_QUERY_RAW_SCAN_FAILED xerrors.ErrorCode = "E6002"
+	XERR_REPO_COUNT_EXEC_FAILED         xerrors.ErrorCode = "E6001"
+	XERR_REPO_COUNT_SCAN_FAILED         xerrors.ErrorCode = "E6002"
+	XERR_REPO_COUNT_WHERE_ARGS_MISMATCH xerrors.ErrorCode = "E6003"
+	XERR_REPO_COUNT_WHERE_EXEC_FAILED   xerrors.ErrorCode = "E6004"
+	XERR_REPO_COUNT_WHERE_SCAN_FAILED   xerrors.ErrorCode = "E6005"
+
+	XERR_REPO_QUERY_RAW_EXEC_FAILED xerrors.ErrorCode = "E7001"
+	XERR_REPO_QUERY_RAW_SCAN_FAILED xerrors.ErrorCode = "E7002"
 )
 
 // xerrorDomainMapRegistry centralizes the core validation error metadata block and default
@@ -232,6 +238,35 @@ var xerrorDomainMapRegistry = map[xerrors.ErrorCode]xerrors.MetaMessage{
 	),
 	XERR_REPO_GET_WHERE_SCAN_FAILED: xerrors.NewMetaMessage(
 		"failed to scan conditional database row into the entity fields",
+		"",
+		[]string{},
+	),
+
+	//
+	//
+
+	XERR_REPO_COUNT_EXEC_FAILED: xerrors.NewMetaMessage(
+		"failed to execute primary key count query statement in the database",
+		"",
+		[]string{},
+	),
+	XERR_REPO_COUNT_SCAN_FAILED: xerrors.NewMetaMessage(
+		"failed to scan primary key count query result",
+		"",
+		[]string{},
+	),
+	XERR_REPO_COUNT_WHERE_ARGS_MISMATCH: xerrors.NewMetaMessage(
+		"query parameters count does not match the provided arguments length for count operation",
+		"",
+		[]string{},
+	),
+	XERR_REPO_COUNT_WHERE_EXEC_FAILED: xerrors.NewMetaMessage(
+		"failed to execute conditional count query statement in the database",
+		"",
+		[]string{},
+	),
+	XERR_REPO_COUNT_WHERE_SCAN_FAILED: xerrors.NewMetaMessage(
+		"failed to scan conditional count query result",
 		"",
 		[]string{},
 	),
