@@ -98,7 +98,7 @@ func TestCheckConfiguration(t *testing.T) {
 			inputCfg: xdb.DBConfig{
 				SQLite: xdb.SQLiteConfig{Mode: ":memory:"},
 			},
-			expectedDSN: ":memory:",
+			expectedDSN: "file::memory:?_pragma=busy_timeout(5000)&_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)",
 		},
 		{
 			name: "Memoria com query string",
@@ -108,7 +108,7 @@ func TestCheckConfiguration(t *testing.T) {
 					QueryString: "cache=shared",
 				},
 			},
-			expectedDSN: "file::memory:?cache=shared",
+			expectedDSN: "file::memory:?cache=shared&_pragma=busy_timeout(5000)&_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)",
 		},
 		{
 			name: "Arquivo em disco valido",
@@ -118,7 +118,7 @@ func TestCheckConfiguration(t *testing.T) {
 					FileName: "local.db",
 				},
 			},
-			expectedDSN: "file:" + filepath.ToSlash(filepath.Join(tmpDir, "local.db")),
+			expectedDSN: "file:" + filepath.ToSlash(filepath.Join(tmpDir, "local.db")) + "?_pragma=busy_timeout(5000)&_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)",
 		},
 		{
 			name: "Arquivo customizado com query string",
@@ -129,7 +129,7 @@ func TestCheckConfiguration(t *testing.T) {
 					QueryString: "mode=ro",
 				},
 			},
-			expectedDSN: "file:" + filepath.ToSlash(filepath.Join(tmpDir, "test.db")) + "?mode=ro",
+			expectedDSN: "file:" + filepath.ToSlash(filepath.Join(tmpDir, "test.db")) + "?mode=ro&_pragma=busy_timeout(5000)&_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)",
 		},
 		{
 			name: "Memoria com file::memory: e query string",
@@ -139,7 +139,7 @@ func TestCheckConfiguration(t *testing.T) {
 					QueryString: "cache=shared",
 				},
 			},
-			expectedDSN: "file::memory:?cache=shared",
+			expectedDSN: "file::memory:?cache=shared&_pragma=busy_timeout(5000)&_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)",
 		},
 		{
 			name: "Campos vazios nao geram DSN",
@@ -188,13 +188,16 @@ func TestInitDataBaseConnection(t *testing.T) {
 		}
 	})
 
-	t.Run("Inicializar Pragma caso ele seja nil", func(t *testing.T) {
+	t.Run("Compilar pragmas default antes de abrir a conexao", func(t *testing.T) {
 		cfg := xdb.DBConfig{
 			Driver: "sqlite",
-			DSN:    ":memory:",
 			SQLite: xdb.SQLiteConfig{
-				Pragma: nil,
+				Mode: ":memory:",
 			},
+		}
+
+		if err := cfg.CheckConfiguration(); err != nil {
+			t.Fatalf("erro inesperado ao compilar configuracao: %v", err)
 		}
 
 		err := cfg.InitDataBaseConnection(ctx)
@@ -211,15 +214,19 @@ func TestInitDataBaseConnection(t *testing.T) {
 		}
 	})
 
-	t.Run("Erro ao executar query de Pragma invalido", func(t *testing.T) {
+	t.Run("Erro ao abrir conexao com pragma invalido", func(t *testing.T) {
 		cfg := xdb.DBConfig{
 			Driver: "sqlite",
-			DSN:    ":memory:",
 			SQLite: xdb.SQLiteConfig{
+				Mode: ":memory:",
 				Pragma: map[string]string{
 					"journal_mode": "WAL; CREATE TABLE );",
 				},
 			},
+		}
+
+		if err := cfg.CheckConfiguration(); err != nil {
+			t.Fatalf("erro inesperado ao compilar configuracao: %v", err)
 		}
 
 		err := cfg.InitDataBaseConnection(ctx)

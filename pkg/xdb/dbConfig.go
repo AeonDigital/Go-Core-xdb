@@ -87,6 +87,9 @@ func (o *DBConfig) buildDSN() {
 
 	o.Driver = "sqlite"
 
+	// Compiles and forces critical SQLite tuning parameters directly into o.SQLite.QueryString
+	o.compileSQLitePragmas()
+
 	mode := strings.TrimSpace(o.SQLite.Mode)
 	if mode == "" {
 		mode = "file:"
@@ -110,7 +113,6 @@ func (o *DBConfig) buildDSN() {
 	}
 
 	fullPath := filepath.Join(o.SQLite.Dir, o.SQLite.FileName)
-
 	dsn := fmt.Sprintf("file:%s", filepath.ToSlash(fullPath))
 
 	if o.SQLite.QueryString != "" {
@@ -118,6 +120,50 @@ func (o *DBConfig) buildDSN() {
 	}
 
 	o.DSN = dsn
+}
+
+// compileSQLitePragmas normalizes defaults and appends SQLite custom configuration settings directly into the QueryString.
+func (o *DBConfig) compileSQLitePragmas() {
+	requiredDefaults := map[string]string{
+		"journal_mode": "WAL",
+		"synchronous":  "NORMAL",
+		"busy_timeout": "5000",
+		"foreign_keys": "ON",
+	}
+
+	if o.SQLite.Pragma == nil {
+		o.SQLite.Pragma = make(map[string]string)
+	}
+
+	for key, defaultValue := range requiredDefaults {
+		if _, exists := o.SQLite.Pragma[key]; !exists {
+			o.SQLite.Pragma[key] = defaultValue
+		}
+	}
+
+	// Order keys alphabetically to guarantee a deterministic DSN generation order
+	var keys []string
+	for key := range o.SQLite.Pragma {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	var pragmaParams []string
+	for _, key := range keys {
+		// modernc.org/sqlite driver format syntax requirement: _pragma=key(value)
+		pragmaParams = append(pragmaParams, fmt.Sprintf("_pragma=%s(%s)", key, o.SQLite.Pragma[key]))
+	}
+
+	compiledPragmas := strings.Join(pragmaParams, "&")
+	if o.SQLite.QueryString == "" {
+		o.SQLite.QueryString = compiledPragmas
+		return
+	}
+
+	// Integrates existing custom user queries while safely compounding the calculated pragmas
+	if !strings.Contains(o.SQLite.QueryString, "_pragma=") {
+		o.SQLite.QueryString = o.SQLite.QueryString + "&" + compiledPragmas
+	}
 }
 
 // CheckConfiguration verifies structural parameters to maintain setup layout consistency before initializing adapters.
@@ -147,40 +193,6 @@ func (o *DBConfig) InitDataBaseConnection(ctx context.Context) error {
 	db.SetConnMaxLifetime(o.ConnectionMaxLifetime)
 
 	if strings.Contains(o.Driver, "sqlite") {
-		requiredDefaults := map[string]string{
-			"journal_mode": "WAL",
-			"synchronous":  "NORMAL",
-			"busy_timeout": "5000",
-			"foreign_keys": "ON",
-		}
-
-		if o.SQLite.Pragma == nil {
-			o.SQLite.Pragma = make(map[string]string)
-		}
-
-		for key, defaultValue := range requiredDefaults {
-			if _, exists := o.SQLite.Pragma[key]; !exists {
-				o.SQLite.Pragma[key] = defaultValue
-			}
-		}
-
-		for key, value := range o.SQLite.Pragma {
-			query := fmt.Sprintf("PRAGMA %s = %s;", key, value)
-			if _, err := db.ExecContext(ctx, query); err != nil {
-				db.Close()
-				return xerrors.NewError500(
-					XERR_PKGCTX,
-					XERR_ENGINE_CONFIG_FAILED,
-					err,
-					"",
-					"",
-				).WithArgs(
-					key,
-					fmt.Sprintf("failed payload query expression: %s", query),
-				)
-			}
-		}
-
 		pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
 		if err := db.PingContext(pingCtx); err != nil {
