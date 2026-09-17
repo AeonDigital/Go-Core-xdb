@@ -45,3 +45,33 @@ func TestRetrieveDbType(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildTruncateQuery(t *testing.T) {
+	t.Run("Usa DELETE sem WHERE para sqlite", func(t *testing.T) {
+		res := xdb.BuildTruncateQuery("sqlite", "users")
+		if res != "DELETE FROM users;" {
+			t.Errorf("esperava 'DELETE FROM users;', recebeu '%s'", res)
+		}
+	})
+
+	t.Run("Usa TRUNCATE TABLE para postgres", func(t *testing.T) {
+		res := xdb.BuildTruncateQuery("postgres", "users")
+		if res != "TRUNCATE TABLE users;" {
+			t.Errorf("esperava 'TRUNCATE TABLE users;', recebeu '%s'", res)
+		}
+	})
+
+	t.Run("Usa TRUNCATE TABLE para mysql", func(t *testing.T) {
+		res := xdb.BuildTruncateQuery("mysql", "users")
+		if res != "TRUNCATE TABLE users;" {
+			t.Errorf("esperava 'TRUNCATE TABLE users;', recebeu '%s'", res)
+		}
+	})
+
+	t.Run("Usa DELETE sem WHERE como padrao para dialeto desconhecido", func(t *testing.T) {
+		res := xdb.BuildTruncateQuery("DB", "users")
+		if res != "DELETE FROM users;" {
+			t.Errorf("esperava 'DELETE FROM users;', recebeu '%s'", res)
+		}
+	})
+}

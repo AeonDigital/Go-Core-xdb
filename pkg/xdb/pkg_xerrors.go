@@ -63,6 +63,8 @@ const (
 
 	XERR_REPO_QUERY_RAW_EXEC_FAILED xerrors.ErrorCode = "E7001"
 	XERR_REPO_QUERY_RAW_SCAN_FAILED xerrors.ErrorCode = "E7002"
+
+	XERR_REPO_TRUNCATE_EXEC_FAILED xerrors.ErrorCode = "E8001"
 )
 
 // xerrorDomainMapRegistry centralizes the core validation error metadata block and default
@@ -269,6 +271,15 @@ var xerrorDomainMapRegistry = map[xerrors.ErrorCode]xerrors.MetaMessage{
 	),
 	XERR_REPO_QUERY_RAW_SCAN_FAILED: xerrors.NewMetaMessage(
 		"failed to scan database row into the raw query destination structure",
+		"",
+		[]string{},
+	),
+
+	//
+	//
+
+	XERR_REPO_TRUNCATE_EXEC_FAILED: xerrors.NewMetaMessage(
+		"failed to execute truncate (delete all) statement in the database",
 		"",
 		[]string{},
 	),

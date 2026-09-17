@@ -3,6 +3,7 @@ package xdb
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -36,4 +37,15 @@ func RetrieveDbType(db *sql.DB) string {
 	}
 
 	return resource
+}
+
+// BuildTruncateQuery assembles the correct schema-clearing statement for the given database dialect.
+// SQLite has no TRUNCATE statement, so it falls back to an unconditional DELETE.
+func BuildTruncateQuery(dbType string, tableName string) string {
+	switch dbType {
+	case "postgres", "mysql":
+		return fmt.Sprintf("TRUNCATE TABLE %s;", tableName)
+	default:
+		return fmt.Sprintf("DELETE FROM %s;", tableName)
+	}
 }

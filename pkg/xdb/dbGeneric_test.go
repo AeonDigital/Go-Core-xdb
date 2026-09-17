@@ -1132,3 +1132,49 @@ func TestDBGeneric_Count(t *testing.T) {
 		}
 	})
 }
+
+func TestDBGeneric_Truncate(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	ctx := context.Background()
+	repo := xdb.NewDBGeneric[MockUser](db)
+
+	t.Run("Success deleting all records on sqlite", func(t *testing.T) {
+		user := &MockUser{Name: "Truncate User", Email: "truncate@example.com"}
+		if errCode := repo.Insert(ctx, user); errCode != xdb.XERR_NONE {
+			t.Fatalf("failed to insert truncate fixture: %s", errCode)
+		}
+
+		errCode := repo.Truncate(ctx)
+		if errCode != xdb.XERR_NONE {
+			t.Fatalf("expected %s, got %s", xdb.XERR_NONE, errCode)
+		}
+
+		count, countErrCode := repo.Count(ctx)
+		if countErrCode != xdb.XERR_NONE {
+			t.Fatalf("expected %s, got %s", xdb.XERR_NONE, countErrCode)
+		}
+		if count != 0 {
+			t.Errorf("expected count 0 after truncate, got %d", count)
+		}
+	})
+
+	t.Run("Success truncating an already empty table", func(t *testing.T) {
+		errCode := repo.Truncate(ctx)
+		if errCode != xdb.XERR_NONE {
+			t.Fatalf("expected %s, got %s", xdb.XERR_NONE, errCode)
+		}
+	})
+
+	t.Run("Fail when database execution crashes", func(t *testing.T) {
+		deadDb, _ := sql.Open("sqlite", ":memory:")
+		deadDb.Close()
+		deadRepo := xdb.NewDBGeneric[MockUser](deadDb)
+
+		errCode := deadRepo.Truncate(ctx)
+		if errCode != xdb.XERR_REPO_TRUNCATE_EXEC_FAILED {
+			t.Errorf("expected %s, got %s", xdb.XERR_REPO_TRUNCATE_EXEC_FAILED, errCode)
+		}
+	})
+}

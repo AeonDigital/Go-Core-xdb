@@ -483,3 +483,18 @@ func (r *DBGeneric[T, PT]) CountWhere(ctx context.Context, queryFragment string,
 
 	return count, XERR_NONE
 }
+
+// Truncate delete all records from the target schema, adapting the statement to the active database dialect.
+func (r *DBGeneric[T, PT]) Truncate(ctx context.Context) xerrors.ErrorCode {
+	var meta PT = new(T)
+	dbType := RetrieveDbType(r.db)
+	query := BuildTruncateQuery(dbType, meta.TableName())
+
+	_, err := r.executor.ExecContext(ctx, query)
+	if err != nil {
+		logRepoError(ctx, r.db, XERR_REPO_TRUNCATE_EXEC_FAILED, err, query, nil)
+		return XERR_REPO_TRUNCATE_EXEC_FAILED
+	}
+
+	return XERR_NONE
+}
