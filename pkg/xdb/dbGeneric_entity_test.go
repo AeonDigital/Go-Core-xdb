@@ -53,7 +53,7 @@ func (m *MockUser) Columns() []string {
 }
 
 // Values returns the field values matching the strict order of Columns().
-func (m *MockUser) Values() []any {
+func (m *MockUser) Values(flat bool) []any {
 	if m.Name == "FORCE_EMPTY_COLUMNS" {
 		return []any{}
 	}

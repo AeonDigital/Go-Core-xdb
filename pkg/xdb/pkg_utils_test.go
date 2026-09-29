@@ -92,7 +92,7 @@ func (m *mockEntity) PKGetValue() any                     { return m.pkVal }
 func (m *mockEntity) PKGenerateValue() any                { return nil }
 func (m *mockEntity) PKExternal() bool                    { return false }
 func (m *mockEntity) Columns() []string                   { return m.cols }
-func (m *mockEntity) Values() []any                       { return m.vals }
+func (m *mockEntity) Values(flat bool) []any              { return m.vals }
 func (m *mockEntity) ScanRow(rows *sql.Rows) error        { return nil }
 func (m *mockEntity) Normalize()                          {}
 func (m *mockEntity) Validate() (bool, xerrors.ErrorCode) { return true, "" }

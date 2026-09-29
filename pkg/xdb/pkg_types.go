@@ -68,7 +68,8 @@ type Entity interface {
 
 	// Values yields the field records mapped in the exact corresponding
 	// sequence order specified by Columns().
-	Values() []any
+	// - flat: if true returns all values in a flat object.
+	Values(flat bool) []any
 
 	// ScanRow hydrats the entire entity fields from an active database
 	// query cursor row result, mapping all table columns sequentially.

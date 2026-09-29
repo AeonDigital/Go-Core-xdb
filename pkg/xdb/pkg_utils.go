@@ -81,7 +81,7 @@ func GetAllColumnValues(entity Entity) []any {
 		return nil
 	}
 
-	vals := entity.Values()
+	vals := entity.Values(true)
 	pkCol := entity.PKColumnName()
 
 	if pkCol == "" {

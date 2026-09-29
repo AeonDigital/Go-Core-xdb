@@ -148,7 +148,7 @@ func (r *DBGeneric[T, PT]) Insert(ctx context.Context, entity PT) xerrors.ErrorC
 	}
 
 	cols := entity.Columns()
-	values := entity.Values()
+	values := entity.Values(false)
 
 	placeholders := make([]string, len(cols))
 	for i := range placeholders {
@@ -224,7 +224,7 @@ func (r *DBGeneric[T, PT]) Update(ctx context.Context, entity PT) xerrors.ErrorC
 	}
 
 	cols := entity.Columns()
-	values := entity.Values()
+	values := entity.Values(false)
 
 	if len(cols) == 0 {
 		logRepoError(ctx, r.db, XERR_REPO_UPDATE_NO_COLUMNS_DEFINED, nil, "", nil)
