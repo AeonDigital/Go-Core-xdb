@@ -97,81 +97,133 @@ func (m *mockEntity) ScanRow(rows *sql.Rows) error        { return nil }
 func (m *mockEntity) Normalize()                          {}
 func (m *mockEntity) Validate() (bool, xerrors.ErrorCode) { return true, "" }
 
-func TestConvertToMap(t *testing.T) {
-	t.Run("Success with valid entity", func(t *testing.T) {
+func TestGetAllColumnNames(t *testing.T) {
+	t.Run("Success with normal entity", func(t *testing.T) {
 		entity := &mockEntity{
 			pkCol: "id",
-			pkVal: int64(42),
 			cols:  []string{"name", "api_type"},
-			vals:  []any{"OpenAI", "rest"},
 		}
 
-		res := xdb.ConvertToMap(entity)
+		res := xdb.GetAllColumnNames(entity)
+		expected := []string{"id", "name", "api_type"}
 
-		if res == nil {
-			t.Fatalf("expected map, got nil")
-		}
 		if len(res) != 3 {
-			t.Errorf("expected map length 3, got %d", len(res))
+			t.Fatalf("expected length 3, got %d", len(res))
 		}
-		if res["id"] != int64(42) {
-			t.Errorf("expected id to be 42, got %v", res["id"])
-		}
-		if res["name"] != "OpenAI" {
-			t.Errorf("expected name to be 'OpenAI', got %v", res["name"])
-		}
-		if res["api_type"] != "rest" {
-			t.Errorf("expected api_type to be 'rest', got %v", res["api_type"])
+		for i, v := range res {
+			if v != expected[i] {
+				t.Errorf("at index %d: expected %s, got %s", i, expected[i], v)
+			}
 		}
 	})
 
 	t.Run("Nil entity handling", func(t *testing.T) {
-		res := xdb.ConvertToMap(nil)
+		res := xdb.GetAllColumnNames(nil)
 		if res != nil {
-			t.Errorf("expected nil result when passing nil entity, got %v", res)
+			t.Errorf("expected nil result, got %v", res)
 		}
 	})
 
-	t.Run("Missing PK column name", func(t *testing.T) {
+	t.Run("Missing PK column", func(t *testing.T) {
 		entity := &mockEntity{
-			pkCol: "", // No PK column
-			pkVal: nil,
+			pkCol: "",
 			cols:  []string{"name"},
-			vals:  []any{"OnlyName"},
 		}
 
-		res := xdb.ConvertToMap(entity)
+		res := xdb.GetAllColumnNames(entity)
+		if len(res) != 1 || res[0] != "name" {
+			t.Errorf("expected ['name'], got %v", res)
+		}
+	})
+}
 
-		if len(res) != 1 {
-			t.Errorf("expected map length 1, got %d", len(res))
+func TestGetAllColumnValues(t *testing.T) {
+	t.Run("Success with normal entity", func(t *testing.T) {
+		entity := &mockEntity{
+			pkCol: "id",
+			pkVal: int64(99),
+			vals:  []any{"OpenAI", "rest"},
 		}
-		if _, exists := res[""]; exists {
-			t.Errorf("did not expect empty string key to be injected")
+
+		res := xdb.GetAllColumnValues(entity)
+		if len(res) != 3 {
+			t.Fatalf("expected length 3, got %d", len(res))
 		}
-		if res["name"] != "OnlyName" {
-			t.Errorf("expected name to be 'OnlyName', got %v", res["name"])
+		if res[0] != int64(99) || res[1] != "OpenAI" || res[2] != "rest" {
+			t.Errorf("unexpected dynamic array build: %v", res)
 		}
 	})
 
-	t.Run("Defensive check for mismatched slice sizes (fewer values than columns)", func(t *testing.T) {
+	t.Run("Nil entity handling", func(t *testing.T) {
+		res := xdb.GetAllColumnValues(nil)
+		if res != nil {
+			t.Errorf("expected nil result, got %v", res)
+		}
+	})
+
+	t.Run("Missing PK column values fallback", func(t *testing.T) {
+		entity := &mockEntity{
+			pkCol: "",
+			vals:  []any{"only_value"},
+		}
+
+		res := xdb.GetAllColumnValues(entity)
+		if len(res) != 1 || res[0] != "only_value" {
+			t.Errorf("expected ['only_value'], got %v", res)
+		}
+	})
+}
+
+func TestConvertEntityAsMap(t *testing.T) {
+	t.Run("Success with valid entity matching schema", func(t *testing.T) {
+		entity := &mockEntity{
+			pkCol: "id",
+			pkVal: int64(42),
+			cols:  []string{"name"},
+			vals:  []any{"OpenAI"},
+		}
+
+		res := xdb.ConvertEntityAsMap(entity)
+
+		if res == nil || len(res) != 2 {
+			t.Fatalf("expected map length 2, got %v", res)
+		}
+		if res["id"] != int64(42) || res["name"] != "OpenAI" {
+			t.Errorf("map values mismatched: %v", res)
+		}
+	})
+
+	t.Run("Nil entity handling", func(t *testing.T) {
+		res := xdb.ConvertEntityAsMap(nil)
+		if res != nil {
+			t.Errorf("expected nil result when passing nil entity")
+		}
+	})
+
+	t.Run("Empty entity schema", func(t *testing.T) {
+		entity := &mockEntity{pkCol: "", cols: []string{}}
+		res := xdb.ConvertEntityAsMap(entity)
+		if res == nil || len(res) != 0 {
+			t.Errorf("expected initialized empty map, got %v", res)
+		}
+	})
+
+	t.Run("Defensive check for mismatched length slices", func(t *testing.T) {
 		entity := &mockEntity{
 			pkCol: "id",
 			pkVal: int64(10),
-			cols:  []string{"col1", "col2", "col3"}, // 3 columns
-			vals:  []any{"val1"},                    // only 1 value
+			cols:  []string{"col1", "col2"}, // 2 extra columns
+			vals:  []any{},                  // 0 extra values
 		}
 
-		res := xdb.ConvertToMap(entity)
+		res := xdb.ConvertEntityAsMap(entity)
 
-		// Expecting PK + 1 value = 2 items total
-		if len(res) != 2 {
-			t.Errorf("expected map length 2, got %d", len(res))
+		// limit rules it to match len(allVals) which is 1 (the PK val)
+		if len(res) != 1 {
+			t.Errorf("expected map length 1 due to mismatch, got %d", len(res))
 		}
-		if res["col1"] != "val1" {
-			t.Errorf("expected col1 to be 'val1', got %v", res["col1"])
-		}
-		if _, exists := res["col2"]; exists {
-			t.Errorf("did not expect col2 to be present due to missing matching value")
+		if res["id"] != int64(10) {
+			t.Errorf("expected 'id' to track 10, got %v", res["id"])
 		}
 	})
 }
