@@ -96,3 +96,118 @@ type CustomQuery[R any] struct {
 	Args    []any
 	Scanner RowScanner[R]
 }
+
+//
+// Expand sql.Null<type> objects
+//
+
+// nullableType defines a generic type constraint for the local wrappers.
+// It maps the internal default structure of each sql.Null* type.
+type nullableType interface {
+	NullBool | NullByte | NullInt16 | NullInt32 | NullInt64 | NullFloat64 | NullTime | NullString
+}
+
+// evalNull centralizes validation logic for nullable types. If the struct is invalid, it returns nil;
+// if valid, it returns the actual value extracted from the correct field.
+func evalNull[T nullableType](n T) any {
+	switch v := any(n).(type) {
+	case NullBool:
+		if !v.Valid {
+			return nil
+		}
+		return v.Bool
+
+	case NullByte:
+		if !v.Valid {
+			return nil
+		}
+		return v.Byte
+
+	case NullInt16:
+		if !v.Valid {
+			return nil
+		}
+		return v.Int16
+
+	case NullInt32:
+		if !v.Valid {
+			return nil
+		}
+		return v.Int32
+
+	case NullInt64:
+		if !v.Valid {
+			return nil
+		}
+		return v.Int64
+
+	case NullFloat64:
+		if !v.Valid {
+			return nil
+		}
+		return v.Float64
+
+	case NullTime:
+		if !v.Valid {
+			return nil
+		}
+		return v.Time
+
+	case NullString:
+		if !v.Valid {
+			return nil
+		}
+		return v.String
+
+	default:
+		return nil
+	}
+}
+
+// NullBool represents a bool that may be null.
+type NullBool struct{ sql.NullBool }
+
+// Val return nil or bool acording to its real value
+func (n NullBool) Val() any { return evalNull(n) }
+
+// NullByte represents a byte that may be null.
+type NullByte struct{ sql.NullByte }
+
+// Val return nil or byte acording to its real value
+func (n NullByte) Val() any { return evalNull(n) }
+
+// NullInt16 represents a int16 that may be null.
+type NullInt16 struct{ sql.NullInt16 }
+
+// Val return nil or int16 acording to its real value
+func (n NullInt16) Val() any { return evalNull(n) }
+
+// NullInt32 represents a int32 that may be null.
+type NullInt32 struct{ sql.NullInt32 }
+
+// Val return nil or int32 acording to its real value
+func (n NullInt32) Val() any { return evalNull(n) }
+
+// NullInt64 represents a int64 that may be null.
+type NullInt64 struct{ sql.NullInt64 }
+
+// Val return nil or int64 acording to its real value
+func (n NullInt64) Val() any { return evalNull(n) }
+
+// NullFloat64 represents a float64 that may be null.
+type NullFloat64 struct{ sql.NullFloat64 }
+
+// Val return nil or float64 acording to its real value
+func (n NullFloat64) Val() any { return evalNull(n) }
+
+// NullTime represents a time.Time that may be null.
+type NullTime struct{ sql.NullTime }
+
+// Val return nil or time.Time acording to its real value
+func (n NullTime) Val() any { return evalNull(n) }
+
+// NullString represents a string that may be null.
+type NullString struct{ sql.NullString }
+
+// Val return nil or string acording to its real value
+func (n NullString) Val() any { return evalNull(n) }
