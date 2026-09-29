@@ -49,3 +49,32 @@ func BuildTruncateQuery(dbType string, tableName string) string {
 		return fmt.Sprintf("DELETE FROM %s;", tableName)
 	}
 }
+
+// ConvertToMap transforms an Entity implementation into a key-value map representation.
+func ConvertToMap(entity Entity) map[string]any {
+	if entity == nil {
+		return nil
+	}
+
+	// Initialize the map with an estimated capacity to prevent unexpected allocations
+	cols := entity.Columns()
+	result := make(map[string]any, len(cols)+1)
+
+	// 1. Inject the Primary Key mapping
+	pkCol := entity.PKColumnName()
+	if pkCol != "" {
+		result[pkCol] = entity.PKGetValue()
+	}
+
+	// 2. Inject general columns and values
+	vals := entity.Values()
+
+	// Defensive check: ensure slices match to prevent out-of-bounds runtime panics
+	limit := min(len(vals), len(cols))
+
+	for i := range limit {
+		result[cols[i]] = vals[i]
+	}
+
+	return result
+}
