@@ -96,3 +96,95 @@ type CustomQuery[R any] struct {
 	Args    []any
 	Scanner RowScanner[R]
 }
+
+//
+// Expand sql.Null<type> objects
+//
+
+// NullBool represents a bool that may be null.
+type NullBool struct{ sql.NullBool }
+
+// Val return nil or bool acording to its real value
+func (n NullBool) Val() any {
+	if !n.Valid {
+		return nil
+	}
+	return n.Bool
+}
+
+// NullByte represents a byte that may be null.
+type NullByte struct{ sql.NullByte }
+
+// Val return nil or byte acording to its real value
+func (n NullByte) Val() any {
+	if !n.Valid {
+		return nil
+	}
+	return n.Byte
+}
+
+// NullInt16 represents a int16 that may be null.
+type NullInt16 struct{ sql.NullInt16 }
+
+// Val return nil or int16 acording to its real value
+func (n NullInt16) Val() any {
+	if !n.Valid {
+		return nil
+	}
+	return n.Int16
+}
+
+// NullInt32 represents a int32 that may be null.
+type NullInt32 struct{ sql.NullInt32 }
+
+// Val return nil or int32 acording to its real value
+func (n NullInt32) Val() any {
+	if !n.Valid {
+		return nil
+	}
+	return n.Int32
+}
+
+// NullInt64 represents a int64 that may be null.
+type NullInt64 struct{ sql.NullInt64 }
+
+// Val return nil or int64 acording to its real value
+func (n NullInt64) Val() any {
+	if !n.Valid {
+		return nil
+	}
+	return n.Int64
+}
+
+// NullFloat64 represents a float64 that may be null.
+type NullFloat64 struct{ sql.NullFloat64 }
+
+// Val return nil or float64 acording to its real value
+func (n NullFloat64) Val() any {
+	if !n.Valid {
+		return nil
+	}
+	return n.Float64
+}
+
+// NullTime represents a time.Time that may be null.
+type NullTime struct{ sql.NullTime }
+
+// Val return nil or time.Time acording to its real value
+func (n NullTime) Val() any {
+	if !n.Valid {
+		return nil
+	}
+	return n.Time
+}
+
+// NullString represents a string that may be null.
+type NullString struct{ sql.NullString }
+
+// Val return nil or string acording to its real value
+func (n NullString) Val() any {
+	if !n.Valid {
+		return nil
+	}
+	return n.String
+}
